@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,10 +57,21 @@ export default function TimerScreen() {
     backgroundColor: interpolateColor(bgProgress.value, [0, 1, 2, 3, 4], BG_VALUES),
   }));
 
+  function confirmExit() {
+    Alert.alert(
+      'Exit Timer',
+      'Are you sure you want to exit?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Exit', style: 'destructive', onPress: () => router.replace('/') },
+      ],
+    );
+  }
+
   // Hardware back button
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.replace('/');
+      confirmExit();
       return true;
     });
     return () => sub.remove();
@@ -70,7 +81,7 @@ export default function TimerScreen() {
     .runOnJS(true)
     .onEnd(() => handleScreenPress());
 
-  const progress = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
+  const progress = totalSeconds > 0 ? Math.min(remainingSeconds / totalSeconds, 1) : 0;
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, animatedBg]}>
@@ -110,7 +121,7 @@ export default function TimerScreen() {
       </GestureDetector>
 
       {/* Exit button — outside GestureDetector */}
-      <Pressable style={styles.exitButton} onPress={() => router.replace('/')} hitSlop={20}>
+      <Pressable style={styles.exitButton} onPress={confirmExit} hitSlop={20}>
         <Text style={styles.exitText}>✕</Text>
       </Pressable>
     </Animated.View>

@@ -1,13 +1,12 @@
 import { Audio } from 'expo-av';
 import { useEffect, useRef } from 'react';
 
-type SoundKey = 'press' | 'warningMinute' | 'warningLow' | 'end';
+type SoundKey = 'press' | 'end' | 'countdown';
 
 const SOUND_SOURCES: Record<SoundKey, number> = {
-  press:          require('@/assets/sounds/press.wav'),
-  warningMinute:  require('@/assets/sounds/warning-minute.mp3'),
-  warningLow:     require('@/assets/sounds/warning-low.wav'),
-  end:            require('@/assets/sounds/end.mp3'),
+  press:     require('@/assets/sounds/press.wav'),
+  end:       require('@/assets/sounds/end.mp3'),
+  countdown: require('@/assets/sounds/heartbeat.wav'),
 };
 
 export function useAudio() {
@@ -43,10 +42,13 @@ export function useAudio() {
     };
   }, []);
 
-  async function playSound(key: SoundKey) {
+  async function playSound(key: SoundKey, volume?: number) {
     const sound = soundsRef.current[key];
     if (!sound) return;
     try {
+      if (volume !== undefined) {
+        await sound.setVolumeAsync(Math.max(0, Math.min(1, volume)));
+      }
       await sound.setPositionAsync(0);
       await sound.playAsync();
     } catch {
@@ -55,9 +57,8 @@ export function useAudio() {
   }
 
   return {
-    playPress:         () => playSound('press'),
-    playWarningMinute: () => playSound('warningMinute'),
-    playWarningLow:    () => playSound('warningLow'),
-    playEnd:           () => playSound('end'),
+    playPress:     () => playSound('press'),
+    playEnd:       () => playSound('end'),
+    playCountdown: (volume: number) => playSound('countdown', volume),
   };
 }

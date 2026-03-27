@@ -15,10 +15,10 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
   const overtimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const turnStartRef = useRef<number>(0);
   const overtimeStartRef = useRef<number>(0);
-  const overtimeBaseRef = useRef<number>(0); // accumulated overtime across stop/start cycles
-  const lastMinuteWarningRef = useRef<number>(-1);
+  const overtimeBaseRef = useRef<number>(0); // accumulated overtime across stop/start cycles (net of increments)
   const lowWarningFiredRef = useRef(false);
   const currentTurnElapsedRef = useRef(0);
+  const normalTurnElapsedRef = useRef(0); // elapsed at the moment the normal timer expired
   const audio = useAudio();
 
   const remainingRef = useRef(remainingSeconds);
@@ -36,25 +36,20 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
 
   function startTicking() {
     turnStartRef.current = Date.now();
-    lastMinuteWarningRef.current = 0;
 
     intervalRef.current = setInterval(() => {
       const elapsed = Math.floor((Date.now() - turnStartRef.current) / 1000);
       currentTurnElapsedRef.current = elapsed;
       setCurrentTurnElapsed(elapsed);
 
-      const minutesPassed = Math.floor(elapsed / 60);
-      if (minutesPassed > 0 && minutesPassed > lastMinuteWarningRef.current) {
-        lastMinuteWarningRef.current = minutesPassed;
-        audio.playWarningMinute();
-      }
-
       setRemainingSeconds(prev => {
         const next = prev - 1;
         if (next <= 0) {
           stopTicking();
-          setTurnHistory(prev => [...prev, currentTurnElapsedRef.current]);
-          setStatus('overtime-idle');
+          // Don't save turn history here — it will be saved when the player stops overtime
+          normalTurnElapsedRef.current = currentTurnElapsedRef.current;
+          setStatus('overtime-running');
+          startOvertimeTicking();
           audio.playEnd();
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           return 0;
@@ -62,7 +57,10 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
         if (next <= LOW_TIME_THRESHOLD_SECONDS && !lowWarningFiredRef.current) {
           lowWarningFiredRef.current = true;
           setStatus('low');
-          audio.playWarningLow();
+        }
+        // 10-second countdown: tick every second with increasing volume
+        if (next > 0 && next <= 10) {
+          audio.playCountdown((11 - next) / 10);
         }
         return next;
       });
@@ -73,8 +71,6 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
     if (overtimeIntervalRef.current !== null) {
       clearInterval(overtimeIntervalRef.current);
       overtimeIntervalRef.current = null;
-      // Accumulate this session's elapsed time into the base
-      overtimeBaseRef.current += Math.floor((Date.now() - overtimeStartRef.current) / 1000);
     }
   }
 
@@ -101,16 +97,19 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
       stopTicking();
       setTurnHistory(prev => [...prev, currentTurnElapsedRef.current]);
       setRemainingSeconds(prev => {
-        const clamped = Math.min(prev + incrementSeconds, totalSeconds);
-        lowWarningFiredRef.current = clamped <= LOW_TIME_THRESHOLD_SECONDS;
+        // Increment can push remaining above the original total — no cap
+        const next = prev + incrementSeconds;
+        lowWarningFiredRef.current = next <= LOW_TIME_THRESHOLD_SECONDS;
         setStatus('idle');
-        return clamped;
+        return next;
       });
       setCurrentTurnElapsed(0);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       audio.playPress();
 
     } else if (current === 'overtime-idle') {
+      // Starting a new overtime turn — this player has no normal elapsed time
+      normalTurnElapsedRef.current = 0;
       startOvertimeTicking();
       setStatus('overtime-running');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -119,7 +118,12 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
     } else if (current === 'overtime-running') {
       const sessionElapsed = Math.floor((Date.now() - overtimeStartRef.current) / 1000);
       stopOvertimeTicking();
-      setTurnHistory(prev => [...prev, sessionElapsed]);
+      // Save total turn time: normal elapsed (before overtime) + overtime elapsed this session
+      const totalTurnTime = normalTurnElapsedRef.current + overtimeBaseRef.current + sessionElapsed;
+      setTurnHistory(prev => [...prev, totalTurnTime]);
+      // Apply increment: reduce overtime counter but never go below 0
+      overtimeBaseRef.current = Math.max(0, overtimeBaseRef.current + sessionElapsed - incrementSeconds);
+      setOvertimeSeconds(overtimeBaseRef.current);
       setStatus('overtime-idle');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       audio.playPress();

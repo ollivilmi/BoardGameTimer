@@ -120,7 +120,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
   },
   startButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
     paddingVertical: 17,
     borderRadius: 14,
     alignItems: 'center',
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
   startButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'rgba(255,255,255,0.9)',
     letterSpacing: 0.3,
   },
 });
