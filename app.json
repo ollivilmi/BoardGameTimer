@@ -29,6 +29,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-system-ui",
+        {
+          "backgroundColor": "#0D1B2A"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

@@ -1,8 +1,9 @@
+import * as Haptics from 'expo-haptics';
 import { useRef } from 'react';
 import { Animated, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-const ITEM_W = 52;
-const PICKER_H = 80;
+const ITEM_W = 58;
+const PICKER_H = 84;
 const SCREEN_PADDING = 56;
 
 type Props = {
@@ -22,6 +23,7 @@ export function HorizontalPicker({ value, min, max, onChange, label, unit }: Pro
   const data = Array.from({ length: max - min + 1 }, (_, i) => min + i);
   const initialOffset = (value - min) * ITEM_W;
   const momentumRef = useRef(false);
+  const lastCommittedRef = useRef(value);
   const scrollAnim = useRef(new Animated.Value(initialOffset)).current;
   const onScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollAnim } } }],
@@ -30,7 +32,12 @@ export function HorizontalPicker({ value, min, max, onChange, label, unit }: Pro
 
   function commit(x: number) {
     const idx = Math.max(0, Math.min(data.length - 1, Math.round(x / ITEM_W)));
-    onChange(min + idx);
+    const next = min + idx;
+    if (next !== lastCommittedRef.current) {
+      lastCommittedRef.current = next;
+      Haptics.selectionAsync();
+    }
+    onChange(next);
   }
 
   return (
@@ -72,18 +79,18 @@ export function HorizontalPicker({ value, min, max, onChange, label, unit }: Pro
                 (i + 1) * ITEM_W,
                 (i + 2) * ITEM_W,
               ],
-              outputRange: [0.08, 0.3, 1.0, 0.3, 0.08],
+              outputRange: [0.08, 0.32, 1.0, 0.32, 0.08],
               extrapolate: 'clamp',
             });
             const scale = scrollAnim.interpolate({
               inputRange: [(i - 1) * ITEM_W, i * ITEM_W, (i + 1) * ITEM_W],
-              outputRange: [0.65, 1.0, 0.65],
+              outputRange: [0.72, 1.0, 0.72],
               extrapolate: 'clamp',
             });
             return (
               <Animated.View key={v} style={[styles.item, { opacity }]}>
                 <Animated.Text style={[styles.itemText, { transform: [{ scale }] }]}>
-                  {v}
+                  {String(v).padStart(2, '0')}
                 </Animated.Text>
               </Animated.View>
             );
@@ -114,13 +121,13 @@ const styles = StyleSheet.create({
   },
   selectionHighlight: {
     position: 'absolute',
-    top: 12,
-    bottom: 12,
+    top: 10,
+    bottom: 10,
     width: ITEM_W,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.12)',
     zIndex: 1,
   },
   item: {
@@ -130,13 +137,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemText: {
-    fontSize: 30,
-    fontWeight: '300',
+    fontSize: 32,
+    fontWeight: '200',
     color: '#FFFFFF',
     fontVariant: ['tabular-nums'],
+    letterSpacing: 2,
   },
   unit: {
-    alignSelf: 'flex-end',
+    alignSelf: 'center',
     fontSize: 12,
     color: 'rgba(255,255,255,0.3)',
     letterSpacing: 0.8,

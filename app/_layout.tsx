@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0D1B2A' }}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="timer" options={{ headerShown: false, animation: 'fade' }} />

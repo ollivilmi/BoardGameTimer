@@ -60,7 +60,8 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
         }
         // 10-second countdown: tick every second with increasing volume
         if (next > 0 && next <= 10) {
-          audio.playCountdown((11 - next) / 10);
+          // Ramp from 0.7 at 10 s to 1.0 at 1 s
+          audio.playCountdown(0.7 + (10 - next) / 30);
         }
         return next;
       });
@@ -118,11 +119,12 @@ export function useTimer(totalSeconds: number, incrementSeconds: number) {
     } else if (current === 'overtime-running') {
       const sessionElapsed = Math.floor((Date.now() - overtimeStartRef.current) / 1000);
       stopOvertimeTicking();
-      // Save total turn time: normal elapsed (before overtime) + overtime elapsed this session
-      const totalTurnTime = normalTurnElapsedRef.current + overtimeBaseRef.current + sessionElapsed;
+      // Save total turn time: time spent before overtime expired + time spent in overtime this session only.
+      // overtimeBaseRef is excluded — it's accumulated credit/debt from prior turns, not this turn's time.
+      const totalTurnTime = normalTurnElapsedRef.current + sessionElapsed;
       setTurnHistory(prev => [...prev, totalTurnTime]);
       // Apply increment: reduce overtime counter but never go below 0
-      overtimeBaseRef.current = Math.max(0, overtimeBaseRef.current + sessionElapsed - incrementSeconds);
+      overtimeBaseRef.current = overtimeBaseRef.current + sessionElapsed - incrementSeconds;
       setOvertimeSeconds(overtimeBaseRef.current);
       setStatus('overtime-idle');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

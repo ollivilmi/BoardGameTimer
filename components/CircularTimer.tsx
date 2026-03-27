@@ -13,9 +13,11 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const SVG_SIZE = (RADIUS + STROKE_WIDTH) * 2;
 
 function formatTime(totalSec: number): string {
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  const abs = Math.abs(totalSec);
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  const formatted = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return totalSec < 0 ? `-${formatted}` : formatted;
 }
 
 type Props = {
