@@ -1,3 +1,4 @@
+import { useKeepAwake } from 'expo-keep-awake';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Alert, BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -32,6 +33,8 @@ export default function TimerScreen() {
 
   const totalSeconds = parseInt(totalParam ?? '1200', 10);
   const incrementSeconds = parseInt(incrementParam ?? '0', 10);
+
+  useKeepAwake();
 
   const { remainingSeconds, currentTurnElapsed, turnHistory, overtimeSeconds, status, handleScreenPress } = useTimer(
     totalSeconds,
